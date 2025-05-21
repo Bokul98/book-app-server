@@ -15,11 +15,9 @@ app.use(express.json());
 const uri = "mongodb+srv://bokulsorkar96:SThpuhOw92D7s12Y@bokul98.nxtyujp.mongodb.net/recipe_data?retryWrites=true&w=majority&tls=true";
 
 const client = new MongoClient(uri, {
-  serverApi: {
-    version: ServerApiVersion.v1,
-    strict: true,
-    deprecationErrors: true,
-  }
+  tls: true,
+  tlsAllowInvalidCertificates: false,
+  serverApi: ServerApiVersion.v1,
 });
 
 let recipeCollection;
