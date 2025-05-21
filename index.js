@@ -2,22 +2,31 @@ const express = require('express');
 const { MongoClient, ServerApiVersion } = require('mongodb');
 
 const app = express();
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 10000;
 
 // Middleware
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 // MongoDB URI from environment variable
-const uri = process.env.MONGODB_URI || "mongodb+srv://bokulsorkar96:SThpuhOw92D7s12Y@bokul98.nxtyujp.mongodb.net/recipe_data?retryWrites=true&w=majority";
+const uri = process.env.MONGODB_URI || "mongodb://bokulsorkar96:SThpuhOw92D7s12Y@ac-wu6epnv-shard-00-00.nxtyujp.mongodb.net:27017,ac-wu6epnv-shard-00-01.nxtyujp.mongodb.net:27017,ac-wu6epnv-shard-00-02.nxtyujp.mongodb.net:27017/recipe_data?ssl=true&replicaSet=atlas-2vvaza-shard-0&authSource=admin&retryWrites=true&w=majority";
 
 const client = new MongoClient(uri, {
   tls: true,
-  tlsAllowInvalidCertificates: false,
+  tlsAllowInvalidCertificates: false, // Set to true for debugging only
   minDHSize: 2048,
   serverApi: ServerApiVersion.v1,
-  connectTimeoutMS: 30000,
+  connectTimeoutMS: 60000,
   maxPoolSize: 10,
+  retryWrites: true,
+  retryReads: true,
+  serverSelectionTimeoutMS: 30000,
+  logger: {
+    debug: (message) => console.log(`[MongoDB Debug] ${message}`),
+    info: (message) => console.log(`[MongoDB Info] ${message}`),
+    warn: (message) => console.warn(`[MongoDB Warn] ${message}`),
+    error: (message) => console.error(`[MongoDB Error] ${message}`),
+  },
 });
 
 let recipeCollection;
