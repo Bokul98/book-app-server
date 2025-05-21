@@ -12,7 +12,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 // MongoDB URI and client setup
-const uri = "mongodb+srv://bokulsorkar96:SThpuhOw92D7s12Y@bokul98.nxtyujp.mongodb.net/?retryWrites=true&w=majority&appName=Bokul98";
+const uri = "mongodb+srv://bokulsorkar96:SThpuhOw92D7s12Y@bokul98.nxtyujp.mongodb.net/recipe_data?retryWrites=true&w=majority&tls=true";
+
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
