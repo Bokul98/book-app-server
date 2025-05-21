@@ -12,12 +12,15 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 // MongoDB URI and client setup
-const uri = "mongodb+srv://bokulsorkar96:SThpuhOw92D7s12Y@bokul98.nxtyujp.mongodb.net/recipe_data?retryWrites=true&w=majority&tls=true";
+const uri = process.env.MONGODB_URI || "mongodb+srv://bokulsorkar96:SThpuhOw92D7s12Y@bokul98.nxtyujp.mongodb.net/recipe_data?retryWrites=true&w=majority";
 
 const client = new MongoClient(uri, {
   tls: true,
-  tlsAllowInvalidCertificates: false,
   serverApi: ServerApiVersion.v1,
+  connectTimeoutMS: 30000, // 30 seconds
+  maxPoolSize: 10,
+  retryWrites: true,
+  w: 'majority',
 });
 
 let recipeCollection;
@@ -26,16 +29,11 @@ async function connectToMongo() {
   try {
     await client.connect();
     console.log("✅ Connected to MongoDB!");
-
     const db = client.db('recipe_data');
     recipeCollection = db.collection('recipe');
-
-    // Start server after DB connection
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running at http://localhost:${PORT}`);
-    });
   } catch (err) {
     console.error("❌ MongoDB connection failed:", err);
+    // Optionally exit or handle the error without crashing
   }
 }
 
@@ -101,6 +99,11 @@ app.get('/get-recipes', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: '❌ Failed to fetch recipes' });
   }
+});
+
+// Start server regardless of MongoDB connection
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Server running at http://localhost:${PORT}`);
 });
 
 // Connect and start the app
