@@ -13,12 +13,11 @@ const uri = process.env.MONGODB_URI || "mongodb+srv://bokulsorkar96:SThpuhOw92D7
 
 const client = new MongoClient(uri, {
   tls: true,
-  tlsAllowInvalidCertificates: false, // Set to true for debugging only
+  tlsAllowInvalidCertificates: false,
   minDHSize: 2048,
   serverApi: ServerApiVersion.v1,
   connectTimeoutMS: 30000,
   maxPoolSize: 10,
-  loggerLevel: 'debug', // Enable debug logging
 });
 
 let recipeCollection;
