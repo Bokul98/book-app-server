@@ -1,26 +1,24 @@
-// index.js
 const express = require('express');
 const { MongoClient, ServerApiVersion } = require('mongodb');
 
 const app = express();
-const PORT = 4000;
+const PORT = process.env.PORT || 4000;
 
-// Middleware to parse urlencoded form data (from forms)
+// Middleware
 app.use(express.urlencoded({ extended: true }));
-
-// Middleware to parse JSON (e.g., API clients)
 app.use(express.json());
 
-// MongoDB URI and client setup
+// MongoDB URI from environment variable
 const uri = process.env.MONGODB_URI || "mongodb+srv://bokulsorkar96:SThpuhOw92D7s12Y@bokul98.nxtyujp.mongodb.net/recipe_data?retryWrites=true&w=majority";
 
 const client = new MongoClient(uri, {
   tls: true,
+  tlsAllowInvalidCertificates: false, // Set to true for debugging only
+  minDHSize: 2048,
   serverApi: ServerApiVersion.v1,
-  connectTimeoutMS: 30000, // 30 seconds
+  connectTimeoutMS: 30000,
   maxPoolSize: 10,
-  retryWrites: true,
-  w: 'majority',
+  loggerLevel: 'debug', // Enable debug logging
 });
 
 let recipeCollection;
@@ -29,11 +27,11 @@ async function connectToMongo() {
   try {
     await client.connect();
     console.log("✅ Connected to MongoDB!");
+    console.log("MongoDB driver version:", require('mongodb').version);
     const db = client.db('recipe_data');
     recipeCollection = db.collection('recipe');
   } catch (err) {
     console.error("❌ MongoDB connection failed:", err);
-    // Optionally exit or handle the error without crashing
   }
 }
 
@@ -47,9 +45,12 @@ app.get('/', (req, res) => {
   res.send('👋 Welcome to the Recipe Book API!');
 });
 
-// POST route to add a recipe and insert into MongoDB
+// POST route to add a recipe
 app.post('/add-recipe', async (req, res) => {
   try {
+    if (!recipeCollection) {
+      throw new Error('MongoDB not connected');
+    }
     const {
       image,
       title,
@@ -60,13 +61,11 @@ app.post('/add-recipe', async (req, res) => {
       likeCount,
     } = req.body;
 
-    // Categories checkbox can be string or array or undefined
     let categories = req.body.categories || [];
     if (!Array.isArray(categories)) {
       categories = [categories];
     }
 
-    // Create recipe object with proper types
     const newRecipe = {
       image,
       title,
@@ -79,11 +78,8 @@ app.post('/add-recipe', async (req, res) => {
       createdAt: new Date(),
     };
 
-    // Insert into MongoDB
     const result = await recipeCollection.insertOne(newRecipe);
-
     console.log("Recipe inserted with ID:", result.insertedId);
-
     res.status(201).send('Recipe successfully added!');
   } catch (error) {
     console.error("Error inserting recipe:", error);
@@ -94,6 +90,9 @@ app.post('/add-recipe', async (req, res) => {
 // GET all recipes
 app.get('/get-recipes', async (req, res) => {
   try {
+    if (!recipeCollection) {
+      throw new Error('MongoDB not connected');
+    }
     const recipes = await recipeCollection.find().toArray();
     res.status(200).json(recipes);
   } catch (err) {
@@ -101,10 +100,19 @@ app.get('/get-recipes', async (req, res) => {
   }
 });
 
-// Start server regardless of MongoDB connection
+// Error handling
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (err) => {
+  console.error('Unhandled Rejection:', err);
+});
+
+// Start server
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running at http://localhost:${PORT}`);
 });
 
-// Connect and start the app
+// Connect to MongoDB
 connectToMongo();
