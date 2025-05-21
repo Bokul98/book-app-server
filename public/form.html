@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <form id="recipeForm" action="/add-recipe" method="POST">
+        <h2>Add a New Recipe</h2>
+
+        <!-- Image URL instead of file upload -->
+        <label for="image">Image URL:</label>
+        <input type="text" id="image" name="image" required><br><br>
+
+
+        <!-- Title -->
+        <label for="title">Title:</label>
+        <input type="text" id="title" name="title" required><br><br>
+
+        <!-- Ingredients -->
+        <label for="ingredients">Ingredients:</label><br>
+        <textarea id="ingredients" name="ingredients" rows="4" required></textarea><br><br>
+
+        <!-- Instructions -->
+        <label for="instructions">Instructions:</label><br>
+        <textarea id="instructions" name="instructions" rows="4" required></textarea><br><br>
+
+        <!-- Cuisine Type Dropdown -->
+        <label for="cuisine">Cuisine Type:</label>
+        <select id="cuisine" name="cuisine" required>
+            <option value="">--Select Cuisine--</option>
+            <option value="Italian">Italian</option>
+            <option value="Mexican">Mexican</option>
+            <option value="Indian">Indian</option>
+            <option value="Chinese">Chinese</option>
+            <option value="Others">Others</option>
+        </select><br><br>
+
+        <!-- Preparation Time -->
+        <label for="prepTime">Preparation Time (in minutes):</label>
+        <input type="number" id="prepTime" name="prepTime" required><br><br>
+
+        <!-- Categories (Checkboxes) -->
+        <label>Categories:</label><br>
+        <input type="checkbox" name="categories" value="Breakfast"> Breakfast<br>
+        <input type="checkbox" name="categories" value="Lunch"> Lunch<br>
+        <input type="checkbox" name="categories" value="Dinner"> Dinner<br>
+        <input type="checkbox" name="categories" value="Dessert"> Dessert<br>
+        <input type="checkbox" name="categories" value="Vegan"> Vegan<br><br>
+
+        <!-- Like Count (initially 0, hidden input) -->
+        <input type="hidden" id="likeCount" name="likeCount" value="0">
+
+        <!-- Submit Button -->
+        <button type="submit">Add Recipe</button>
+    </form>
+
+</body>
+
+</html>
