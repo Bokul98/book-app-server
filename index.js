@@ -4,7 +4,7 @@ const { MongoClient, ServerApiVersion } = require('mongodb');
 const path = require('path');
 
 const app = express();
-const PORT = process.env.PORT || 10000;
+
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -34,15 +34,30 @@ async function connectToMongo() {
     return;
   }
 
-  try {
-    await client.connect();
-    console.log('✅ Connected to MongoDB!');
-    const db = client.db('recipe_data');
-    recipeCollection = db.collection('recipe');
-  } catch (err) {
-    console.error('❌ MongoDB connection failed:', err);
+  if (!client.isConnected?.()) {
+    try {
+      await client.connect();
+      console.log('✅ Connected to MongoDB!');
+    } catch (err) {
+      console.error('❌ MongoDB connection failed:', err);
+      throw err;
+    }
   }
+  const db = client.db('recipe_data');
+  recipeCollection = db.collection('recipe');
 }
+
+
+app.use(async (req, res, next) => {
+  try {
+    if (!recipeCollection) {
+      await connectToMongo();
+    }
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
 
 app.get('/', (req, res) => {
   res.send('👋 Welcome to the Recipe Books API!');
@@ -119,11 +134,9 @@ process.on('unhandledRejection', (err) => {
   console.error('❗ Unhandled Rejection:', err);
 });
 
-async function startServer() {
-  await connectToMongo();
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Server running at http://localhost:${PORT}`);
-  });
-}
 
-startServer();
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log(`🚀 Server is running on http://localhost:${PORT}`);
+});
