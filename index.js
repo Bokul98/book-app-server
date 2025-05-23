@@ -125,6 +125,31 @@ async function run() {
         res.status(500).json({ error: `Failed to fetch recipe details: ${err.message}` });
       }
     });
+    
+    app.patch('/recipes/:id/like', async (req, res) => {
+      const { id } = req.params;
+
+      if (!ObjectId.isValid(id)) {
+        return res.status(400).json({ message: 'Invalid recipe ID' });
+      }
+
+      try {
+        const result = await recipeCollection.findOneAndUpdate(
+          { _id: new ObjectId(id) },
+          { $inc: { likeCount: 1 } },
+          { returnDocument: 'after' }
+        );
+
+        if (!result.value) {
+          return res.status(404).json({ message: 'Recipe not found' });
+        }
+
+        res.status(200).json(result.value);
+      } catch (error) {
+        console.error('Error incrementing like:', error);
+        res.status(500).json({ message: 'Internal server error' });
+      }
+    });
 
   } catch (err) {
     console.error('MongoDB connection failed:', err);
