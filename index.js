@@ -1,18 +1,23 @@
-require('dotenv').config();
 const express = require('express');
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const cors = require('cors');
+require('dotenv').config();
 const path = require('path');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb'); // ✅ SINGLE import
 
 const app = express();
+const port = process.env.PORT || 3000;
 
-
+// Middleware
+app.use(cors());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// MongoDB URI
 const uri = process.env.MONGODB_URI;
 
-const client = new MongoClient(uri || '', {
+// MongoDB client setup
+const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
     strict: true,
@@ -26,117 +31,122 @@ const client = new MongoClient(uri || '', {
   serverSelectionTimeoutMS: 15000,
 });
 
-let recipeCollection;
+async function run() {
+  try {
+    await client.connect();
+    console.log('Connected to MongoDB');
 
-async function connectToMongo() {
-  if (!uri) {
-    console.warn('⚠️ MONGODB_URI is not set. Skipping DB connection.');
-    return;
-  }
+    const db = client.db('recipe_data');
+    const recipeCollection = db.collection('recipe');
 
-  if (!client.isConnected?.()) {
-    try {
-      await client.connect();
-      console.log('✅ Connected to MongoDB!');
-    } catch (err) {
-      console.error('❌ MongoDB connection failed:', err);
-      throw err;
-    }
+    // Health Check
+    app.get('/health', async (req, res) => {
+      try {
+        await client.db('admin').command({ ping: 1 });
+        res.status(200).json({ status: 'OK', mongodb: 'Connected' });
+      } catch (err) {
+        res.status(500).json({ status: 'Error', mongodb: 'Disconnected', error: err.message });
+      }
+    });
+
+    // Serve form page
+    app.get('/add', (req, res) => {
+      res.sendFile(path.join(__dirname, 'public', 'form.html'));
+    });
+
+    // Add recipe
+    app.post('/add-recipe', async (req, res) => {
+      try {
+        const {
+          userId,
+          image,
+          title,
+          ingredients,
+          instructions,
+          cuisine,
+          prepTime,
+          likeCount,
+          categories = []
+        } = req.body;
+
+        const cats = Array.isArray(categories) ? categories : [categories];
+
+        const newRecipe = {
+          userId,
+          image,
+          title,
+          ingredients,
+          instructions,
+          cuisine,
+          prepTime: Number(prepTime),
+          likeCount: Number(likeCount) || 0,
+          categories: cats,
+          createdAt: new Date()
+        };
+
+        const result = await recipeCollection.insertOne(newRecipe);
+        console.log('Recipe inserted with ID:', result.insertedId);
+        res.status(201).send('Recipe successfully added!');
+      } catch (error) {
+        console.error('Error inserting recipe:', error);
+        res.status(500).send('Failed to add recipe');
+      }
+    });
+
+    // Get all recipes
+    app.get('/get-recipes', async (req, res) => {
+      try {
+        const recipes = await recipeCollection.find().toArray();
+        res.status(200).json(recipes);
+      } catch (err) {
+        console.error('Error fetching recipes:', err.message);
+        res.status(500).json({ error: `Failed to fetch recipes: ${err.message}` });
+      }
+    });
+
+    // Get single recipe
+    app.get('/get-recipe/:id', async (req, res) => {
+      try {
+        const { id } = req.params;
+
+        if (!ObjectId.isValid(id)) {
+          return res.status(400).json({ error: 'Invalid recipe ID format' });
+        }
+
+        const recipe = await recipeCollection.findOne({ _id: new ObjectId(id) });
+
+        if (!recipe) {
+          return res.status(404).json({ error: 'Recipe not found' });
+        }
+
+        res.status(200).json(recipe);
+      } catch (err) {
+        console.error('Error fetching recipe details:', err.message);
+        res.status(500).json({ error: `Failed to fetch recipe details: ${err.message}` });
+      }
+    });
+
+  } catch (err) {
+    console.error('MongoDB connection failed:', err);
+    process.exit(1);
   }
-  const db = client.db('recipe_data');
-  recipeCollection = db.collection('recipe');
 }
 
+run().catch(console.dir);
 
-app.use(async (req, res, next) => {
-  try {
-    if (!recipeCollection) {
-      await connectToMongo();
-    }
-    next();
-  } catch (err) {
-    next(err);
-  }
-});
-
+// Home Route
 app.get('/', (req, res) => {
-  res.send('👋 Welcome to the Recipe Books API!');
+  res.send('Welcome to the Recipe Book API!');
 });
 
-app.get('/add', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'form.html'));
-});
-
-app.get('/health', async (req, res) => {
-  try {
-    if (!recipeCollection) throw new Error('MongoDB not connected');
-    await client.db('admin').command({ ping: 1 });
-    res.status(200).json({ status: 'OK', mongodb: 'Connected' });
-  } catch (err) {
-    res.status(500).json({ status: 'Error', mongodb: 'Disconnected', error: err.message });
-  }
-});
-
-app.post('/add-recipe', async (req, res) => {
-  try {
-    if (!recipeCollection) throw new Error('MongoDB not connected');
-
-    const {
-      image,
-      title,
-      ingredients,
-      instructions,
-      cuisine,
-      prepTime,
-      likeCount,
-    } = req.body;
-
-    let categories = req.body.categories || [];
-    if (!Array.isArray(categories)) categories = [categories];
-
-    const newRecipe = {
-      image,
-      title,
-      ingredients,
-      instructions,
-      cuisine,
-      prepTime: Number(prepTime),
-      categories,
-      likeCount: Number(likeCount) || 0,
-      createdAt: new Date(),
-    };
-
-    const result = await recipeCollection.insertOne(newRecipe);
-    console.log('✅ Recipe inserted with ID:', result.insertedId);
-    res.status(201).send('Recipe successfully added!');
-  } catch (error) {
-    console.error('❌ Error inserting recipe:', error);
-    res.status(500).send('Failed to add recipe');
-  }
-});
-
-app.get('/get-recipes', async (req, res) => {
-  try {
-    if (!recipeCollection) throw new Error('MongoDB collection not initialized.');
-    const recipes = await recipeCollection.find().toArray();
-    res.status(200).json(recipes);
-  } catch (err) {
-    console.error('❌ Error in /get-recipes:', err.message);
-    res.status(500).json({ error: `Failed to fetch recipes: ${err.message}` });
-  }
-});
-
+// Global error handlers
 process.on('uncaughtException', (err) => {
-  console.error('❗ Uncaught Exception:', err);
+  console.error('Uncaught Exception:', err);
 });
-
 process.on('unhandledRejection', (err) => {
-  console.error('❗ Unhandled Rejection:', err);
+  console.error('Unhandled Rejection:', err);
 });
 
-
-const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, () => {
-  console.log(`🚀 Server is running on http://localhost:${PORT}`);
+app.listen(port, () => {
+  console.log(`Server running at http://localhost:${port}`);
 });
