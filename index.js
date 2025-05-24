@@ -125,7 +125,7 @@ async function run() {
         res.status(500).json({ error: `Failed to fetch recipe details: ${err.message}` });
       }
     });
-    
+
     app.patch('/recipes/:id/like', async (req, res) => {
       const { id } = req.params;
 
@@ -150,6 +150,62 @@ async function run() {
         res.status(500).json({ message: 'Internal server error' });
       }
     });
+
+
+
+
+    // PUT: Update a recipe by ID
+    // ✅ Correct Update Recipe Route
+    app.put('/update-recipe/:id', async (req, res) => {
+      const { id } = req.params;
+
+      if (!ObjectId.isValid(id)) {
+        return;
+      }
+
+      let {
+        title,
+        image,
+        cuisine,
+        prepTime,
+        categories,
+        ingredients,
+        instructions,
+        likeCount,
+      } = req.body;
+
+      if (categories && !Array.isArray(categories)) categories = [categories];
+      if (ingredients && !Array.isArray(ingredients)) ingredients = [ingredients];
+
+      const updateData = {
+        title,
+        image,
+        cuisine,
+        prepTime: prepTime !== undefined ? Number(prepTime) : undefined,
+        categories,
+        ingredients,
+        instructions,
+        likeCount: likeCount !== undefined ? Number(likeCount) : undefined,
+      };
+
+      Object.keys(updateData).forEach(
+        (key) => updateData[key] === undefined && delete updateData[key]
+      );
+
+      const result = await recipeCollection.findOneAndUpdate(
+        { _id: new ObjectId(id) },
+        { $set: updateData },
+        { returnDocument: 'after' }
+      );
+
+      res.status(200).json(result.value);
+    });
+
+
+
+
+
+
 
     // Delete recipe
     app.delete('/delete-recipe/:id', async (req, res) => {
